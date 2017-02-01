@@ -25,6 +25,10 @@ DEFAULTS = {
         'patch'
     ],
     'VALIDATOR_URL': '',
+    'BASEPATH': None,
+    'HOST': 'www.example.com',
+    'SCHEMES': ['http'],
+    'PRODUCES': ['application/json']
 }
 
 IMPORT_STRINGS = []
