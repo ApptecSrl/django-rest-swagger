@@ -2,12 +2,12 @@ import coreapi
 from coreapi.compat import force_bytes
 from django.shortcuts import render, resolve_url
 from openapi_codec import OpenAPICodec as _OpenAPICodec
-from openapi_codec.encode import generate_swagger_object
 from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework import status
 import simplejson as json
 
 from .settings import swagger_settings
+from .encode import generate_swagger_object
 
 
 class OpenAPICodec(_OpenAPICodec):
