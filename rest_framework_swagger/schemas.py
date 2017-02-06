@@ -52,11 +52,13 @@ class SwaggerSchemaGenerator(SchemaGenerator):
 
     def _generate_schema_from_dict(self, schema_dict):
         properties = self._generate_properties_list_from_dict(schema_dict.get('properties', {}))
+        ref_name = schema_dict.get('ref_name', None)
+        print(ref_name)
         if schema_dict.get('items', None):
             items = self._generate_schema_from_dict(schema_dict.get('items'))
         else:
             items = None
-        return Schema(schema_dict.get('type'), properties, items)
+        return Schema(schema_dict.get('type'), ref_name, properties, items)
 
     def _generate_properties_list_from_dict(self, properties_dict_struct):
         properties = []

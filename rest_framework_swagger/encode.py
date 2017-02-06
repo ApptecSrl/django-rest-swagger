@@ -22,6 +22,7 @@ def generate_swagger_object(document):
         swagger['schemes'] = [parsed_url.scheme]
 
     swagger['paths'] = _get_paths_object(document)
+    swagger['definitions'] = _get_definitions_object(document)
 
     return swagger
 
@@ -183,7 +184,7 @@ def _get_responses(link):
     Returns minimally acceptable responses object based
     on action / method type.
     """
-    responses = {}
+    responses = OrderedDict()
     if link.responses:
         for response in link.responses:
             responses.update(_format_response(response))
@@ -209,8 +210,11 @@ def _format_response(response):
     return {response.state: attributes}
 
 
-def _encode_schema(schema):
-    encoded = {}
+def _encode_schema(schema, definition=False):
+    if schema.ref_name and not definition:
+        return {'$ref': '#/definitions/%s' % schema.ref_name}
+
+    encoded = OrderedDict()
     encoded['type'] = schema.type
     if schema.type == 'object':
         properties = {}
@@ -229,3 +233,39 @@ def _encode_schema(schema):
             encoded['items'] = _encode_schema(schema.items)
 
     return encoded
+
+
+def _get_schema_definition(schema):
+    name = None
+    definition = {}
+    if schema.ref_name:
+        name = schema.ref_name
+        definition = _encode_schema(schema, True)
+    return name, definition
+
+
+def _schema_walker(schema):
+    definitions = OrderedDict()
+    name, definition = _get_schema_definition(schema)
+    if name:
+        definitions[name] = definition
+    if schema.items:
+        depth_definitions = _schema_walker(schema.items)
+        for k, v in depth_definitions.items():
+            definitions[k] = v
+    return definitions
+
+
+def _get_definitions_object(document):
+    definitions = OrderedDict()
+
+    links = _get_links(document)
+
+    for operation_id, link, tags in links:
+        for response in link.responses:
+            schema = response.schema
+            if schema:
+                schema_defs = _schema_walker(schema)
+            for k, v in schema_defs.items():
+                definitions[k] = v
+    return definitions

@@ -16,10 +16,12 @@ Property = namedtuple('Property', ['name', 'type', 'format', 'description'])
 
 class Schema(itypes.Object):
 
-    def __init__(self, var_type=None, properties=None, items=None):
+    def __init__(self, var_type=None, ref_name=None, properties=None, items=None):
 
         if var_type is not None and not isinstance(var_type, string_types):
             raise TypeError("'var_type' must be a string.")
+        if ref_name is not None and not isinstance(ref_name, string_types):
+            raise TypeError("'ref_name' must be a string.")
         if (properties is not None) and (not isinstance(properties, (list, tuple))):
             raise TypeError("Argument 'properties' must be a list.")
         if (properties is not None) and any([
@@ -31,12 +33,17 @@ class Schema(itypes.Object):
             raise TypeError("'items' must be a Schema.")
 
         self._var_type = '' if (var_type is None) else var_type
+        self._ref_name = '' if (ref_name is None) else ref_name
         self._properties = () if (properties is None) else properties
         self._items = items
 
     @property
     def type(self):
         return self._var_type
+
+    @property
+    def ref_name(self):
+        return self._ref_name
 
     @property
     def properties(self):
@@ -48,6 +55,7 @@ class Schema(itypes.Object):
 
     def __repr__(self):
         args = "type=%s" % self.type
+        # args += ", ref_name=%s" % self.ref_name
         if self.properties:
             repr_proprieties = ', '.join([prop.name for prop in self.properties])
             args += "properties=[%s]" % repr_proprieties
