@@ -1,7 +1,13 @@
+from django.utils.encoding import force_text
 from rest_framework.compat import urlparse
-from rest_framework.schemas import SchemaGenerator as SchemaGenerator
+from rest_framework.schemas import SchemaGenerator
+from rest_framework.schemas import types_lookup
 
 from .document import Link, Response, Schema, Property
+
+
+class Dummy(object):
+    pass
 
 
 class SwaggerSchemaGenerator(SchemaGenerator):
@@ -38,27 +44,56 @@ class SwaggerSchemaGenerator(SchemaGenerator):
         return link
 
     def get_meta_responses(self, path, method, view):
-        class Dummy(object):
-            pass
         responses = []
         meta = getattr(view, 'Meta', Dummy)
         swagger_responses = getattr(meta, 'swagger_responses', {})
         action = swagger_responses.get(view.action, {})
         for state, response in action.items():
             description = response.get('description', '')
-            schema = self._generate_schema_from_dict(response.get('schema', {}))
+            schema = self._schema_parser(response.get('schema', {}))
             responses.append(Response(state, description, schema))
         return responses
 
-    def _generate_schema_from_dict(self, schema_dict):
-        properties = self._generate_properties_list_from_dict(schema_dict.get('properties', {}))
-        ref_name = schema_dict.get('ref_name', None)
-        print(ref_name)
-        if schema_dict.get('items', None):
-            items = self._generate_schema_from_dict(schema_dict.get('items'))
+    def _schema_parser(self, schema):
+        ref_name = self.get_schema_reference(schema)
+        if schema.get('properties'):
+            properties = self._generate_properties_list_from_dict(schema.get('properties'))
+        elif schema.get('serializer'):
+            properties = self.get_serializer_proprieties(schema.get('serializer'))
+
+        else:
+            properties = []
+
+        if schema.get('items', None):
+            items = self._schema_parser(schema.get('items'))
         else:
             items = None
-        return Schema(schema_dict.get('type'), ref_name, properties, items)
+        return Schema(schema.get('type'), ref_name, properties, items)
+
+    def get_schema_reference(self, schema):
+        ref_name = schema.get('ref_name', None)
+        if not ref_name:
+            serializer = schema.get('serializer', None)
+            if serializer:
+                meta = getattr(serializer, 'Meta', Dummy)
+                model = getattr(meta, 'model', None)
+                if model:
+                    ref_name = model.__name__
+        return ref_name
+
+    def get_serializer_proprieties(self, serializer):
+        properties = []
+        for field in serializer().fields.values():
+            description = force_text(field.help_text) if field.help_text else ''
+            prop = Property(
+                name=field.field_name,
+                type=types_lookup[field],
+                format='',
+                description=description
+            )
+
+            properties.append(prop)
+        return properties
 
     def _generate_properties_list_from_dict(self, properties_dict_struct):
         properties = []
